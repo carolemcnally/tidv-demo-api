@@ -3,6 +3,10 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 10001;
+const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
+const SCHEME = process.env.BASE_SCHEME || "https";
+const BASE = `${SCHEME}://${BASE_HOST}`;
+
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "guid" }));
 
