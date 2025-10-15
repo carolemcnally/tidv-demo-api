@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: dth-guid-demo-v2-bearer-dth
+    env: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: APP_KIND
+        value: "dth"
+      - key: BASE_PUBLIC
+        fromService:
+          type: web
+          name: dth-guid-demo-v2-bearer-dth
+          property: url
+      - key: BENEFITS_BASE
+        fromService:
+          type: web
+          name: dth-guid-demo-v2-bearer-dth
+          property: url
+      - key: KONG_BASE
+        fromService:
+          type: web
+          name: dth-guid-demo-v2-bearer-dth
+          property: url
+      - key: ACCESS_BASE
+        fromService:
+          type: web
+          name: dth-guid-demo-v2-bearer-dth
+          property: url
+      - key: DEMO_BEARER_TOKEN
+        generateValue: true
+      - key: REDIRECT_MODE
+        value: "true"
+    healthCheckPath: /health
+
+  - type: web
+    name: dth-guid-demo-v2-bearer-guid
+    env: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "10001"
+      - key: APP_KIND
+        value: "guid"
+      - key: BASE_PUBLIC
+        fromService:
+          type: web
+          name: dth-guid-demo-v2-bearer-guid
+          property: url
+      - key: DEMO_BEARER_TOKEN
+        generateValue: true
+    healthCheckPath: /health
