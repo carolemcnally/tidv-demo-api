@@ -8,6 +8,7 @@ const SCHEME = process.env.BASE_SCHEME || "https";
 const BASE = `${SCHEME}://${BASE_HOST}`;
 
 
+
 app.get("/health", (req, res) => res.json({ ok: true, service: "guid" }));
 
 app.get("/guid/:guid", (req, res) => {
