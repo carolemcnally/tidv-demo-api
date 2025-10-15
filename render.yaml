@@ -2,40 +2,43 @@ services:
   - type: web
     name: dth-guid-demo-v2-bearer-dth
     env: docker
-    plan: free
     autoDeploy: true
+    dockerCommand: ["node", "apps/dth/server.js"]
     envVars:
       - key: PORT
         value: "10000"
       - key: APP_KIND
         value: "dth"
-      # Render doesn't expose 'url', so capture the hostname and build the URL in code
       - key: BASE_HOST
-        fromService:
-          type: web
-          name: dth-guid-demo-v2-bearer-dth
-          property: host
-      # For the demo, all three bases are the same service; reuse BASE_HOST
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
       - key: BENEFITS_HOST
-        fromService:
-          type: web
-          name: dth-guid-demo-v2-bearer-dth
-          property: host
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
       - key: KONG_HOST
-        fromService:
-          type: web
-          name: dth-guid-demo-v2-bearer-dth
-          property: host
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
       - key: ACCESS_HOST
-        fromService:
-          type: web
-          name: dth-guid-demo-v2-bearer-dth
-          property: host
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
       - key: DEMO_BEARER_TOKEN
         generateValue: true
       - key: REDIRECT_MODE
         value: "true"
     healthCheckPath: /health
+
+  - type: web
+    name: dth-guid-demo-v2-bearer-2
+    env: docker
+    autoDeploy: true
+    dockerCommand: ["node", "apps/guid/server.js"]
+    envVars:
+      - key: PORT
+        value: "10001"
+      - key: APP_KIND
+        value: "guid"
+      - key: BASE_HOST
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-2, property: host }
+      - key: DEMO_BEARER_TOKEN
+        generateValue: true
+    healthCheckPath: /health
+
 
   - type: web
     name: dth-guid-demo-v2-bearer-guid
