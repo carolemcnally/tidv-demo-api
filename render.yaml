@@ -9,14 +9,6 @@ services:
         value: "10000"
       - key: APP_KIND
         value: "dth"
-      - key: BASE_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
-      - key: BENEFITS_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
-      - key: KONG_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
-      - key: ACCESS_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-dth, property: host }
       - key: DEMO_BEARER_TOKEN
         generateValue: true
       - key: REDIRECT_MODE
@@ -33,8 +25,6 @@ services:
         value: "10001"
       - key: APP_KIND
         value: "guid"
-      - key: BASE_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-guid, property: host }
       - key: DEMO_BEARER_TOKEN
         generateValue: true
     healthCheckPath: /health
