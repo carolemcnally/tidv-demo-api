@@ -38,23 +38,3 @@ services:
       - key: DEMO_BEARER_TOKEN
         generateValue: true
     healthCheckPath: /health
-
-
-  - type: web
-    name: dth-guid-demo-v2-bearer-guid
-    env: docker
-    plan: free
-    autoDeploy: true
-    envVars:
-      - key: PORT
-        value: "10001"
-      - key: APP_KIND
-        value: "guid"
-      - key: BASE_HOST
-        fromService:
-          type: web
-          name: dth-guid-demo-v2-bearer-guid
-          property: host
-      - key: DEMO_BEARER_TOKEN
-        generateValue: true
-    healthCheckPath: /health
