@@ -4,16 +4,13 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
-
-// Build https://<host> from Render-provided host
 const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
 const SCHEME = process.env.BASE_SCHEME || "https";
 const BASE = `${SCHEME}://${BASE_HOST}`;
-
-// For this demo, all three “bases” can be this same service/host
 const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
 const KONG     = process.env.KONG_BASE     || `${SCHEME}://${process.env.KONG_HOST     || BASE_HOST}`;
 const ACCESS   = process.env.ACCESS_BASE   || `${SCHEME}://${process.env.ACCESS_HOST   || BASE_HOST}`;
+
 
 const BEARER = process.env.DEMO_BEARER_TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
