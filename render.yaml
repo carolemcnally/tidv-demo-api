@@ -24,7 +24,7 @@ services:
     healthCheckPath: /health
 
   - type: web
-    name: dth-guid-demo-v2-bearer-2
+    name: dth-guid-demo-v2-bearer-guid
     env: docker
     autoDeploy: true
     dockerCommand: ["node", "apps/guid/server.js"]
@@ -34,7 +34,7 @@ services:
       - key: APP_KIND
         value: "guid"
       - key: BASE_HOST
-        fromService: { type: web, name: dth-guid-demo-v2-bearer-2, property: host }
+        fromService: { type: web, name: dth-guid-demo-v2-bearer-guid, property: host }
       - key: DEMO_BEARER_TOKEN
         generateValue: true
     healthCheckPath: /health
