@@ -12,7 +12,7 @@ const KONG     = process.env.KONG_BASE     || `${SCHEME}://${process.env.KONG_HO
 const ACCESS   = process.env.ACCESS_BASE   || `${SCHEME}://${process.env.ACCESS_HOST   || BASE_HOST}`;
 
 
-const BEARER = process.env.DEMO_BEARER_TOKEN || "demo_token";
+const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
 
 
