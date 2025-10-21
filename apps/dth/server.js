@@ -111,17 +111,18 @@ app.post("/validate", requireBearer, (req, res) => {
   console.log("📥 Incoming headers:", req.headers);
   const { dob, postcode, nino, phone } = req.body || {};
 
-  const normalizeDob = (d) => {
-    if (!d) return d;
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-    if (isoMatch) {
-      const yyyy = isoMatch[1];
-      const mm = isoMatch[2];
-      const dd = isoMatch[3];
-      return `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
-    }
-    return d;
-  };
+ const normalizeDob = (d) => {
+  if (!d) return d;
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (isoMatch) {
+    const yyyy = isoMatch[1];
+    const mm = isoMatch[2];
+    const dd = isoMatch[3];
+    return `${dd}-${mm}-${yyyy}`; // Correct: converts YYYY-MM-DD → DD-MM-YYYY
+  }
+  return d;
+};
+
 
   const normalizedDob = normalizeDob(dob);
   console.log("📥 Raw DOB:", dob);
@@ -141,7 +142,7 @@ app.post("/validate", requireBearer, (req, res) => {
   if (phone && phone !== demoValues.phone) failures.push("phone");
 
   const match = failures.length === 0;
-  console.log(match ? "✅ Validation success" : `❌ Validation failed. Fields: ${failures}`);
+  console.log(match ? "Validation success" : `Validation failed. Fields: ${failures}`);
 
   if (!match) {
     return res
