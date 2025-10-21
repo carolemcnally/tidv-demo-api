@@ -159,6 +159,69 @@ app.post("/validate", requireBearer, (req, res) => {
   const statusCode = errorStatus === 0 ? 200 : 401;
   return res.type("application/json").status(statusCode).json(response);
 });
+// ------------------ VALIDATE POSTCODE & NINO ENDPOINT ------------------
+app.post("/validate-postcode-nino", requireBearer, (req, res) => {
+  console.log("Incoming headers:", req.headers);
+  const { postcode, nino } = req.body || {};
+
+  // Normalize postcode (remove spaces, uppercase)
+  const normalizePostcode = (pc) => {
+    if (!pc) return pc;
+    return String(pc).replace(/\s+/g, '').toUpperCase();
+  };
+
+  // Normalize NINO (remove spaces, uppercase)
+  const normalizeNino = (n) => {
+    if (!n) return n;
+    return String(n).replace(/\s+/g, '').toUpperCase();
+  };
+
+  const normalizedPostcode = normalizePostcode(postcode);
+  const normalizedNino = normalizeNino(nino);
+  
+  console.log("Raw Postcode:", postcode);
+  console.log("Normalized Postcode:", normalizedPostcode);
+  console.log("Raw NINO:", nino);
+  console.log("Normalized NINO:", normalizedNino);
+
+  // Demo values to match against
+  const demoValues = {
+    postcode: "N225QH",  // No spaces, uppercase
+    nino: "JC735092A"    // No spaces, uppercase
+  };
+
+  // Match flags
+  const postcodeMatches = normalizedPostcode === demoValues.postcode;
+  const ninoMatches = normalizedNino === demoValues.nino;
+
+  let errorStatus;
+  let failedField = null;
+  
+  if (postcodeMatches && ninoMatches) {
+    errorStatus = 0;  // Both matched
+  } else if (postcodeMatches || ninoMatches) {
+    errorStatus = 1;  // One matched
+    failedField = !postcodeMatches ? "postcode" : "nino";
+  } else {
+    errorStatus = 2;  // Both failed
+  }
+
+  const response = {
+    postcode: normalizedPostcode,
+    nino: normalizedNino,
+    errorStatus,
+    match: errorStatus === 0,
+    message: errorStatus === 0 ? "Validation successful" : "Validation failed",
+    confidenceLevel: errorStatus === 0 ? 3 : 0,
+    guid: errorStatus === 0 ? "GUID_DEMO_001" : "",
+    failedField: failedField
+  };
+
+  console.log(`✓ Matches: postcode=${postcodeMatches}, nino=${ninoMatches} → errorStatus=${errorStatus}`);
+
+  const statusCode = errorStatus === 0 ? 200 : 401;
+  return res.type("application/json").status(statusCode).json(response);
+});
 
 
 // ------------------ START SERVER ------------------
