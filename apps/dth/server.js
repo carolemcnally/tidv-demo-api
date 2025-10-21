@@ -8,24 +8,26 @@ const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
 const SCHEME = process.env.BASE_SCHEME || "https";
 const BASE = `${SCHEME}://${BASE_HOST}`;
 const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
-const KONG     = process.env.KONG_BASE     || `${SCHEME}://${process.env.KONG_HOST     || BASE_HOST}`;
-const ACCESS   = process.env.ACCESS_BASE   || `${SCHEME}://${process.env.ACCESS_HOST   || BASE_HOST}`;
+const KONG = process.env.KONG_BASE || `${SCHEME}://${process.env.KONG_HOST || BASE_HOST}`;
+const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST || BASE_HOST}`;
 
 const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
 
+// ------------------ AUTH CHECK ------------------
 const requireBearer = (req, res, next) => {
   const header = req.headers["authorization"] || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  console.log("\u{1F4AC} Received token:", JSON.stringify(token));
-  console.log("\u{1F511} Expected BEARER:", JSON.stringify(BEARER));
+  console.log("💬 Received token:", JSON.stringify(token));
+  console.log("🔐 Expected BEARER:", JSON.stringify(BEARER));
   if (token !== BEARER) {
-    console.warn("\u{1F6AB} Invalid token!");
+    console.warn("🚫 Invalid token!");
     return res.status(401).json({ error: "invalid bearer" });
   }
   next();
 };
 
+// ------------------ BASIC ROUTES ------------------
 const sendRedirect = (res, location) => res.set("Location", location).status(302).send();
 const sendLocationJson = (res, location) => res.json({ location });
 
@@ -104,31 +106,27 @@ app.get("/idv-failure", requireBearer, (req, res) => {
   });
 });
 
-app.get("/", (req, res) => res.send("DTH (TIDV) demo service is running"));
-
+// ------------------ VALIDATE ENDPOINT ------------------
 app.post("/validate", requireBearer, (req, res) => {
-  console.log("Incoming headers:", req.headers);
+  console.log("📥 Incoming headers:", req.headers);
+  const { dob, postcode, nino, phone } = req.body || {};
 
-  let body = req.body;
-  if (typeof body === "string") {
-    try {
-      body = JSON.parse(body);
-      console.log("✅ Parsed JSON body:", body);
-    } catch (err) {
-      console.error("❌ Invalid JSON body:", err.message);
-      return res.status(400).json({ error: "Invalid JSON" });
-    }
-  }
-
-  const { dob, postcode, nino, phone } = body || {};
-
+  // Normalize DOB input
   const normalizeDob = (d) => {
     if (!d) return d;
-    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-    return isoMatch ? `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}` : d;
+    const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(d);
+    if (isoMatch) {
+      const dd = isoMatch[3].padStart(2, "0");
+      const mm = isoMatch[2].padStart(2, "0");
+      const yyyy = isoMatch[1];
+      return `${dd}-${mm}-${yyyy}`;
+    }
+    return d;
   };
 
   const normalizedDob = normalizeDob(dob);
+  console.log("📥 Raw DOB:", dob);
+  console.log("🧩 Normalized DOB:", normalizedDob);
 
   const demoValues = {
     dob: "01-05-1975",
@@ -138,13 +136,15 @@ app.post("/validate", requireBearer, (req, res) => {
   };
 
   const failures = [];
-  if (normalizedDob !== demoValues.dob) failures.push("dob");
+  if (normalizedDob && normalizedDob !== demoValues.dob) failures.push("dob");
   if (postcode && postcode !== demoValues.postcode) failures.push("postcode");
   if (nino && nino !== demoValues.nino) failures.push("nino");
   if (phone && phone !== demoValues.phone) failures.push("phone");
 
-  if (failures.length > 0) {
-    console.warn("❌ Validation failed. Fields:", failures);
+  const match = failures.length === 0;
+  console.log(match ? "✅ Validation success" : `❌ Validation failed. Fields: ${failures}`);
+
+  if (!match) {
     return res.status(401).json({
       match: false,
       message: "Validation failed",
@@ -160,4 +160,5 @@ app.post("/validate", requireBearer, (req, res) => {
   });
 });
 
-app.listen(PORT, () => console.log(`DTH listening on ${PORT}`));
+// ------------------ START SERVER ------------------
+app.listen(PORT, () => console.log(`🚀 DTH listening on port ${PORT}`));
