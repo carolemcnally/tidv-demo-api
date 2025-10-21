@@ -106,7 +106,16 @@ app.get("/", (req, res) => res.send("DTH (TIDV) demo service is running"));
 app.post("/validate", requireBearer, (req, res) => {
   const { dob, postcode, nino, phone } = req.body || {};
 
-  // Hardcoded demo values
+  // Normalize DOB input to one consistent format
+  const normalizeDob = (d) => {
+    if (!d) return d;
+    // Convert YYYY-MM-DD → DD-MM-YYYY if needed
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    return isoMatch ? `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}` : d;
+  };
+
+  const normalizedDob = normalizeDob(dob);
+
   const demoValues = {
     dob: "01-05-1975",
     postcode: "N22 5QH",
@@ -114,13 +123,11 @@ app.post("/validate", requireBearer, (req, res) => {
     phone: "07983215336"
   };
 
-  // Build a list of mismatched fields
   const failures = [];
-
-  if (dob !== undefined && dob !== demoValues.dob) failures.push("dob");
-  if (postcode !== undefined && postcode !== demoValues.postcode) failures.push("postcode");
-  if (nino !== undefined && nino !== demoValues.nino) failures.push("nino");
-  if (phone !== undefined && phone !== demoValues.phone) failures.push("phone");
+  if (normalizedDob !== demoValues.dob) failures.push("dob");
+  if (postcode && postcode !== demoValues.postcode) failures.push("postcode");
+  if (nino && nino !== demoValues.nino) failures.push("nino");
+  if (phone && phone !== demoValues.phone) failures.push("phone");
 
   const match = failures.length === 0;
 
@@ -139,6 +146,7 @@ app.post("/validate", requireBearer, (req, res) => {
     guid: "GUID_DEMO_001"
   });
 });
+
 
 
 app.listen(PORT, () => console.log(`DTH listening on ${PORT}`));
