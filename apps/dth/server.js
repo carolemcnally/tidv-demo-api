@@ -108,62 +108,58 @@ app.get("/idv-failure", requireBearer, (req, res) => {
 
 // ------------------ VALIDATE ENDPOINT ------------------
 app.post("/validate", requireBearer, (req, res) => {
-  console.log("📥 Incoming headers:", req.headers);
-  const { dob, postcode, nino, phone } = req.body || {};
+  console.log("Incoming headers:", req.headers);
+  const { dob, phone } = req.body || {};
 
-const normalizeDob = (d) => {
-  if (!d) return d;
-  const date = new Date(d);
-  if (isNaN(date)) return d; // fallback
-
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const year = date.getUTCFullYear();
-  return `${day}-${month}-${year}`;
-};
-
-
+  // Normalize DOB input
+  const normalizeDob = (d) => {
+    if (!d) return d;
+    const date = new Date(d);
+    if (isNaN(date)) return d; // fallback
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}-${month}-${year}`;
+  };
 
   const normalizedDob = normalizeDob(dob);
-  console.log("📥 Raw DOB:", dob);
-  console.log("🧩 Normalized DOB:", normalizedDob);
+  console.log("Raw DOB:", dob);
+  console.log("Normalized DOB:", normalizedDob);
 
   const demoValues = {
     dob: "01-01-1975",
-    postcode: "N22 5QH",
-    nino: "JC735092A",
     phone: "07983215336"
   };
 
-  const failures = [];
-  if (normalizedDob && normalizedDob !== demoValues.dob) failures.push("dob");
-  if (postcode && postcode !== demoValues.postcode) failures.push("postcode");
-  if (nino && nino !== demoValues.nino) failures.push("nino");
-  if (phone && phone !== demoValues.phone) failures.push("phone");
+  // Match flags
+  const dobMatches = normalizedDob === demoValues.dob;
+  const phoneMatches = phone === demoValues.phone;
 
-  const match = failures.length === 0;
-  console.log(match ? "Validation success" : `Validation failed. Fields: ${failures}`);
-
-  if (!match) {
-    return res
-      .type("application/json")
-      .status(401)
-      .json({
-        match: false,
-        message: "Validation failed",
-        failedFields: failures
-      });
+  let errorStatus;
+  if (dobMatches && phoneMatches) {
+    errorStatus = 0;
+  } else if (dobMatches || phoneMatches) {
+    errorStatus = 1;
+  } else {
+    errorStatus = 2;
   }
 
-  return res
-    .type("application/json")
-    .json({
-      match: true,
-      message: "Validation successful",
-      confidenceLevel: 3,
-      guid: "GUID_DEMO_001"
-    });
+  const response = {
+    dob: normalizedDob,
+    phone: phone,
+    errorStatus,
+    match: errorStatus === 0,
+    message: errorStatus === 0 ? "Validation successful" : "Validation failed",
+    confidenceLevel: errorStatus === 0 ? 3 : 0,
+    guid: errorStatus === 0 ? "GUID_DEMO_001" : ""
+  };
+
+  console.log(` Matches: dob=${dobMatches}, phone=${phoneMatches} → errorStatus=${errorStatus}`);
+
+  const statusCode = errorStatus === 0 ? 200 : 401;
+  return res.type("application/json").status(statusCode).json(response);
 });
+
 
 // ------------------ START SERVER ------------------
 app.listen(PORT, () => console.log(`🚀 DTH listening on port ${PORT}`));
