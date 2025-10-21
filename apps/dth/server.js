@@ -116,6 +116,8 @@ app.post("/validate", requireBearer, (req, res) => {
   console.log("Incoming headers:", req.headers);
 
   let body = req.body;
+  console.log("🧾 Raw body content:", req.body);
+
 
   // Parse raw string if needed
   if (typeof body === "string") {
