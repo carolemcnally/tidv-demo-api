@@ -104,6 +104,7 @@ app.get("/idv-failure", requireBearer, (req, res) => {
 app.get("/", (req, res) => res.send("DTH (TIDV) demo service is running"));
 
 app.post("/validate", requireBearer, (req, res) => {
+   console.log("Incoming headers:", req.headers);
   const { dob, postcode, nino, phone } = req.body || {};
 
   // Normalize DOB input to one consistent format
