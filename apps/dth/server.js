@@ -112,43 +112,27 @@ app.post("/validate", requireBearer, (req, res) => {
   const { dob, phone } = req.body || {};
 
   // Normalize DOB input
-const normalizeDob = (d) => {
-  if (!d) return d;
-  
-  const str = String(d).trim();
-  
-  // If already in DD-MM-YYYY format, return as-is
-  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+  const normalizeDob = (d) => {
+    if (!d) return d;
+    
+    const str = String(d).trim();
+    
+    // If already in DD-MM-YYYY format, return as-is
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+      return str;
+    }
+    
+    // If in YYYY-MM-DD format (ISO from Omilia), convert directly
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      // Extract just the date part (ignore time/timezone)
+      const dateOnly = str.substring(0, 10); // Get "YYYY-MM-DD"
+      const [year, month, day] = dateOnly.split('-');
+      return `${day}-${month}-${year}`;
+    }
+    
+    // Fallback - return as-is
     return str;
-  }
-  
-  // If in YYYY-MM-DD format (ISO from Omilia), convert directly
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    // Extract just the date part (ignore time/timezone)
-    const dateOnly = str.substring(0, 10); // Get "YYYY-MM-DD"
-    const [year, month, day] = dateOnly.split('-');
-    return `${day}-${month}-${year}`;
-  }
-  
-  // Fallback - return as-is
-  return str;
-};
-  
-  // If it's in YYYY-MM-DD format (ISO), convert to DD-MM-YYYY
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    const [year, month, day] = str.split('-');
-    return `${day}-${month}-${year}`;
-  }
-  
-  // Try to parse as date (fallback)
-  const date = new Date(d);
-  if (isNaN(date)) return d;
-  
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const year = date.getUTCFullYear();
-  return `${day}-${month}-${year}`;
-};
+  };
 
   const normalizedDob = normalizeDob(dob);
   console.log("Raw DOB:", dob);
