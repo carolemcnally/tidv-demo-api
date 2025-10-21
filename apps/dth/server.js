@@ -112,27 +112,29 @@ app.post("/validate", requireBearer, (req, res) => {
   const { dob, phone } = req.body || {};
 
   // Normalize DOB input
-  const normalizeDob = (d) => {
-    if (!d) return d;
-    
-    const str = String(d).trim();
-    
-    // If already in DD-MM-YYYY format, return as-is
-    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
-      return str;
-    }
-    
-    // If in YYYY-MM-DD format (ISO from Omilia), convert directly
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-      // Extract just the date part (ignore time/timezone)
-      const dateOnly = str.substring(0, 10); // Get "YYYY-MM-DD"
-      const [year, month, day] = dateOnly.split('-');
-      return `${day}-${month}-${year}`;
-    }
-    
-    // Fallback - return as-is
+ const normalizeDob = (d) => {
+  if (!d) return d;
+  
+  const str = String(d).trim();
+  
+  // If already in DD-MM-YYYY format, return as-is
+  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
     return str;
-  };
+  }
+  
+  // If in YYYY-MM-DD format (ISO from Omilia)
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const dateOnly = str.substring(0, 10);
+    const [year, month, day] = dateOnly.split('-');
+    
+    // WORKAROUND: Omilia sends MM-DD instead of DD-MM in ISO format
+    // So swap them back: treat "month" as day and "day" as month
+    return `${month}-${day}-${year}`;  // Swapped!
+  }
+  
+  // Fallback
+  return str;
+};
 
   const normalizedDob = normalizeDob(dob);
   console.log("Raw DOB:", dob);
