@@ -132,7 +132,7 @@ const normalizeDob = (d) => {
   console.log("🧩 Normalized DOB:", normalizedDob);
 
   const demoValues = {
-    dob: "01-05-1975",
+    dob: "05-01-1975",
     postcode: "N22 5QH",
     nino: "JC735092A",
     phone: "07983215336"
