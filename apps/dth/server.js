@@ -111,28 +111,24 @@ app.post("/validate", requireBearer, (req, res) => {
   console.log("📥 Incoming headers:", req.headers);
   const { dob, postcode, nino, phone } = req.body || {};
 
-  // Normalize DOB input
-const normalizeDob = (d) => {
-  if (!d) return d;
-  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (isoMatch) {
-    // Interpret as MM-DD-YYYY instead of DD-MM-YYYY
-    const yyyy = isoMatch[1];
-    const mm = isoMatch[2];
-    const dd = isoMatch[3];
-    return `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
-  }
-  return d;
-};
-
-
+  const normalizeDob = (d) => {
+    if (!d) return d;
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (isoMatch) {
+      const yyyy = isoMatch[1];
+      const mm = isoMatch[2];
+      const dd = isoMatch[3];
+      return `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
+    }
+    return d;
+  };
 
   const normalizedDob = normalizeDob(dob);
   console.log("📥 Raw DOB:", dob);
   console.log("🧩 Normalized DOB:", normalizedDob);
 
   const demoValues = {
-    dob: "05-01-1975",
+    dob: "01-05-1975",
     postcode: "N22 5QH",
     nino: "JC735092A",
     phone: "07983215336"
@@ -148,19 +144,24 @@ const normalizeDob = (d) => {
   console.log(match ? "✅ Validation success" : `❌ Validation failed. Fields: ${failures}`);
 
   if (!match) {
-    return res.status(401).json({
-      match: false,
-      message: "Validation failed",
-      failedFields: failures
-    });
+    return res
+      .type("application/json")
+      .status(401)
+      .json({
+        match: false,
+        message: "Validation failed",
+        failedFields: failures
+      });
   }
 
-  return res.json({
-    match: true,
-    message: "Validation successful",
-    confidenceLevel: 3,
-    guid: "GUID_DEMO_001"
-  });
+  return res
+    .type("application/json")
+    .json({
+      match: true,
+      message: "Validation successful",
+      confidenceLevel: 3,
+      guid: "GUID_DEMO_001"
+    });
 });
 
 // ------------------ START SERVER ------------------
