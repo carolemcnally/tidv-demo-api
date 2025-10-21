@@ -114,16 +114,17 @@ app.post("/validate", requireBearer, (req, res) => {
   // Normalize DOB input
 const normalizeDob = (d) => {
   if (!d) return d;
-  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(d);
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
   if (isoMatch) {
-    // Intentionally interpret as MM-DD-YYYY
-    const dd = isoMatch[2].padStart(2, "0");
-    const mm = isoMatch[3].padStart(2, "0");
+    // Interpret as MM-DD-YYYY instead of DD-MM-YYYY
     const yyyy = isoMatch[1];
-    return `${dd}-${mm}-${yyyy}`;
+    const mm = isoMatch[2];
+    const dd = isoMatch[3];
+    return `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
   }
   return d;
 };
+
 
 
   const normalizedDob = normalizeDob(dob);
