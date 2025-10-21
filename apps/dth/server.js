@@ -106,18 +106,29 @@ app.get("/", (req, res) => res.send("DTH (TIDV) demo service is running"));
 app.post("/validate", requireBearer, (req, res) => {
   const { dob, postcode, nino, phone } = req.body || {};
 
-  // Example demo check – expand as needed
-  const isValid =
-    dob === "1990-01-01" &&
-    postcode === "AB1 2CD" &&
-    nino === "QQ123456A" &&
-    phone === "07700123456";
+  // Hardcoded demo values
+  const demoValues = {
+    dob: "01-05-1975",
+    postcode: "N22 5QH",
+    nino: "JC735092A",
+    phone: "07983215336"
+  };
 
-  if (!isValid) {
+  // Build a list of mismatched fields
+  const failures = [];
+
+  if (dob !== undefined && dob !== demoValues.dob) failures.push("dob");
+  if (postcode !== undefined && postcode !== demoValues.postcode) failures.push("postcode");
+  if (nino !== undefined && nino !== demoValues.nino) failures.push("nino");
+  if (phone !== undefined && phone !== demoValues.phone) failures.push("phone");
+
+  const match = failures.length === 0;
+
+  if (!match) {
     return res.status(401).json({
       match: false,
       message: "Validation failed",
-      fields: { dob, postcode, nino, phone }
+      failedFields: failures
     });
   }
 
@@ -128,5 +139,6 @@ app.post("/validate", requireBearer, (req, res) => {
     guid: "GUID_DEMO_001"
   });
 });
+
 
 app.listen(PORT, () => console.log(`DTH listening on ${PORT}`));
