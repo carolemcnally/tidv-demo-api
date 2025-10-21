@@ -112,17 +112,19 @@ app.post("/validate", requireBearer, (req, res) => {
   const { dob, postcode, nino, phone } = req.body || {};
 
   // Normalize DOB input
-  const normalizeDob = (d) => {
-    if (!d) return d;
-    const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(d);
-    if (isoMatch) {
-      const dd = isoMatch[3].padStart(2, "0");
-      const mm = isoMatch[2].padStart(2, "0");
-      const yyyy = isoMatch[1];
-      return `${dd}-${mm}-${yyyy}`;
-    }
-    return d;
-  };
+const normalizeDob = (d) => {
+  if (!d) return d;
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(d);
+  if (isoMatch) {
+    // Intentionally interpret as MM-DD-YYYY
+    const dd = isoMatch[2].padStart(2, "0");
+    const mm = isoMatch[3].padStart(2, "0");
+    const yyyy = isoMatch[1];
+    return `${dd}-${mm}-${yyyy}`;
+  }
+  return d;
+};
+
 
   const normalizedDob = normalizeDob(dob);
   console.log("📥 Raw DOB:", dob);
