@@ -112,22 +112,38 @@ app.post("/validate", requireBearer, (req, res) => {
   const { dob, phone } = req.body || {};
 
   // Normalize DOB input
-  const normalizeDob = (d) => {
-    if (!d) return d;
-    const date = new Date(d);
-    if (isNaN(date)) return d; // fallback
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const year = date.getUTCFullYear();
+ const normalizeDob = (d) => {
+  if (!d) return d;
+  
+  const str = String(d).trim();
+  
+  // If it's already in DD-MM-YYYY format, return as-is
+  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+    return str;
+  }
+  
+  // If it's in YYYY-MM-DD format (ISO), convert to DD-MM-YYYY
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [year, month, day] = str.split('-');
     return `${day}-${month}-${year}`;
-  };
+  }
+  
+  // Try to parse as date (fallback)
+  const date = new Date(d);
+  if (isNaN(date)) return d;
+  
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  return `${day}-${month}-${year}`;
+};
 
   const normalizedDob = normalizeDob(dob);
   console.log("Raw DOB:", dob);
   console.log("Normalized DOB:", normalizedDob);
 
   const demoValues = {
-    dob: "01-01-1975",
+    dob: "01-05-1975",
     phone: "07983215336"
   };
 
