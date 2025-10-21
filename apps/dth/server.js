@@ -1,21 +1,15 @@
 import express from "express";
 
 const app = express();
-
-// Standard JSON parser
 app.use(express.json());
-
-// Fallback: for clients like Apache HttpClient or Omilia
-app.use(express.text({ type: "application/json" }));
-app.use(express.text({ type: "text/plain" }));
 
 const PORT = process.env.PORT || 10000;
 const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
 const SCHEME = process.env.BASE_SCHEME || "https";
 const BASE = `${SCHEME}://${BASE_HOST}`;
 const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
-const KONG = process.env.KONG_BASE || `${SCHEME}://${process.env.KONG_HOST || BASE_HOST}`;
-const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST || BASE_HOST}`;
+const KONG     = process.env.KONG_BASE     || `${SCHEME}://${process.env.KONG_HOST     || BASE_HOST}`;
+const ACCESS   = process.env.ACCESS_BASE   || `${SCHEME}://${process.env.ACCESS_HOST   || BASE_HOST}`;
 
 const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
@@ -23,10 +17,10 @@ const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() 
 const requireBearer = (req, res, next) => {
   const header = req.headers["authorization"] || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  console.log("💬 Received token:", JSON.stringify(token));
-  console.log("🔐 Expected BEARER:", JSON.stringify(BEARER));
+  console.log("\u{1F4AC} Received token:", JSON.stringify(token));
+  console.log("\u{1F511} Expected BEARER:", JSON.stringify(BEARER));
   if (token !== BEARER) {
-    console.warn("🚫 Invalid token!");
+    console.warn("\u{1F6AB} Invalid token!");
     return res.status(401).json({ error: "invalid bearer" });
   }
   next();
@@ -116,15 +110,13 @@ app.post("/validate", requireBearer, (req, res) => {
   console.log("Incoming headers:", req.headers);
 
   let body = req.body;
-  console.log("🧾 Raw body content:", req.body);
-
-
-  // Parse raw string if needed
   if (typeof body === "string") {
     try {
       body = JSON.parse(body);
+      console.log("✅ Parsed JSON body:", body);
     } catch (err) {
-      return res.status(400).json({ error: "Invalid JSON body" });
+      console.error("❌ Invalid JSON body:", err.message);
+      return res.status(400).json({ error: "Invalid JSON" });
     }
   }
 
@@ -151,9 +143,8 @@ app.post("/validate", requireBearer, (req, res) => {
   if (nino && nino !== demoValues.nino) failures.push("nino");
   if (phone && phone !== demoValues.phone) failures.push("phone");
 
-  const match = failures.length === 0;
-
-  if (!match) {
+  if (failures.length > 0) {
+    console.warn("❌ Validation failed. Fields:", failures);
     return res.status(401).json({
       match: false,
       message: "Validation failed",
