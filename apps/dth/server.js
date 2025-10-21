@@ -19,9 +19,15 @@ const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() 
 const requireBearer = (req, res, next) => {
   const header = req.headers["authorization"] || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (token !== BEARER) return res.status(401).json({ error: "invalid bearer" });
+  console.log("💬 Received token:", JSON.stringify(token));
+  console.log("🔐 Expected BEARER:", JSON.stringify(BEARER));
+  if (token !== BEARER) {
+    console.warn("🚫 Invalid token!");
+    return res.status(401).json({ error: "invalid bearer" });
+  }
   next();
 };
+
 
 const sendRedirect = (res, location) => res.set("Location", location).status(302).send();
 const sendLocationJson = (res, location) => res.json({ location });
