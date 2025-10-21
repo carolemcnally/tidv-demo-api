@@ -1,20 +1,24 @@
 import express from "express";
 
 const app = express();
+
+// Standard JSON parser
 app.use(express.json());
+
+// Fallback: for clients like Apache HttpClient or Omilia
+app.use(express.text({ type: "application/json" }));
+app.use(express.text({ type: "text/plain" }));
 
 const PORT = process.env.PORT || 10000;
 const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
 const SCHEME = process.env.BASE_SCHEME || "https";
 const BASE = `${SCHEME}://${BASE_HOST}`;
 const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
-const KONG     = process.env.KONG_BASE     || `${SCHEME}://${process.env.KONG_HOST     || BASE_HOST}`;
-const ACCESS   = process.env.ACCESS_BASE   || `${SCHEME}://${process.env.ACCESS_HOST   || BASE_HOST}`;
-
+const KONG = process.env.KONG_BASE || `${SCHEME}://${process.env.KONG_HOST || BASE_HOST}`;
+const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST || BASE_HOST}`;
 
 const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
-
 
 const requireBearer = (req, res, next) => {
   const header = req.headers["authorization"] || "";
@@ -27,7 +31,6 @@ const requireBearer = (req, res, next) => {
   }
   next();
 };
-
 
 const sendRedirect = (res, location) => res.set("Location", location).status(302).send();
 const sendLocationJson = (res, location) => res.json({ location });
@@ -110,13 +113,23 @@ app.get("/idv-failure", requireBearer, (req, res) => {
 app.get("/", (req, res) => res.send("DTH (TIDV) demo service is running"));
 
 app.post("/validate", requireBearer, (req, res) => {
-   console.log("Incoming headers:", req.headers);
-  const { dob, postcode, nino, phone } = req.body || {};
+  console.log("Incoming headers:", req.headers);
 
-  // Normalize DOB input to one consistent format
+  let body = req.body;
+
+  // Parse raw string if needed
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid JSON body" });
+    }
+  }
+
+  const { dob, postcode, nino, phone } = body || {};
+
   const normalizeDob = (d) => {
     if (!d) return d;
-    // Convert YYYY-MM-DD → DD-MM-YYYY if needed
     const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
     return isoMatch ? `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}` : d;
   };
@@ -153,7 +166,5 @@ app.post("/validate", requireBearer, (req, res) => {
     guid: "GUID_DEMO_001"
   });
 });
-
-
 
 app.listen(PORT, () => console.log(`DTH listening on ${PORT}`));
