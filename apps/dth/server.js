@@ -111,17 +111,17 @@ app.post("/validate", requireBearer, (req, res) => {
   console.log("📥 Incoming headers:", req.headers);
   const { dob, postcode, nino, phone } = req.body || {};
 
- const normalizeDob = (d) => {
+const normalizeDob = (d) => {
   if (!d) return d;
-  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (isoMatch) {
-    const yyyy = isoMatch[1];
-    const mm = isoMatch[2];
-    const dd = isoMatch[3];
-    return `${dd}-${mm}-${yyyy}`; // Correct: converts YYYY-MM-DD → DD-MM-YYYY
-  }
-  return d;
+  const date = new Date(d);
+  if (isNaN(date)) return d; // fallback
+
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  return `${day}-${month}-${year}`;
 };
+
 
 
   const normalizedDob = normalizeDob(dob);
