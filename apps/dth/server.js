@@ -170,8 +170,7 @@ app.post("/validate", requireBearer, (req, res) => {
 
   console.log(` Matches: dob=${dobMatches}, phone=${phoneMatches} → errorStatus=${errorStatus}`);
 
-  const statusCode = errorStatus === 0 ? 200 : 401;
-  return res.type("application/json").status(statusCode).json(response);
+  return res.type("application/json").status(200).json(response);
 });
 // ------------------ VALIDATE POSTCODE & NINO ENDPOINT ------------------
 app.post("/validate-postcode-nino", requireBearer, (req, res) => {
