@@ -232,8 +232,7 @@ app.post("/validate-postcode-nino", requireBearer, (req, res) => {
 
   console.log(`✓ Matches: postcode=${postcodeMatches}, nino=${ninoMatches} → errorStatus=${errorStatus}`);
 
-  const statusCode = errorStatus === 0 ? 200 : 401;
-  return res.type("application/json").status(statusCode).json(response);
+  return res.type("application/json").status(200).json(response);
 });
 
 
