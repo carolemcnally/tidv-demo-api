@@ -277,9 +277,7 @@ const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST
 const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
 
-// ... rest of your code stays the same
-Or if that's too invasive, just update the /validate-all endpoint with try-catch:
-javascript// ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
+// ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
 app.post("/validate-all", requireBearer, (req, res) => {
   try {
     console.log("Incoming headers:", req.headers);
