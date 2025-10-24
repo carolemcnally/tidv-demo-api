@@ -235,48 +235,6 @@ app.post("/validate-postcode-nino", requireBearer, (req, res) => {
   return res.type("application/json").status(200).json(response);
 });
 
-Your JSON body configuration looks correct! However, based on the error logs, the issue is that when Omilia sends the request, the JSON might not be getting properly formatted. Let me add better error handling and logging to debug this:
-Add this enhanced error handling to your server:
-javascriptimport express from "express";
-
-const app = express();
-
-// Add raw body capture BEFORE json parser for debugging
-app.use(express.raw({ type: 'application/json', limit: '10mb' }));
-
-// Custom JSON parsing with better error handling
-app.use((req, res, next) => {
-  if (req.headers['content-type']?.includes('application/json') && req.body) {
-    try {
-      const rawBody = req.body.toString('utf8');
-      console.log('📦 Raw JSON body:', rawBody);
-      req.body = JSON.parse(rawBody);
-      console.log('✅ Parsed body:', req.body);
-    } catch (e) {
-      console.error('❌ JSON Parse Error:', e.message);
-      console.error('📦 Failed raw body:', req.body.toString('utf8'));
-      return res.status(400).json({
-        error: 'Invalid JSON',
-        details: e.message,
-        position: e.message.match(/position (\d+)/)?.[1],
-        receivedBody: req.body.toString('utf8').substring(0, 200)
-      });
-    }
-  }
-  next();
-});
-
-const PORT = process.env.PORT || 10000;
-const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
-const SCHEME = process.env.BASE_SCHEME || "https";
-const BASE = `${SCHEME}://${BASE_HOST}`;
-const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
-const KONG = process.env.KONG_BASE || `${SCHEME}://${process.env.KONG_HOST || BASE_HOST}`;
-const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST || BASE_HOST}`;
-
-const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
-const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
-
 // ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
 app.post("/validate-all", requireBearer, (req, res) => {
   try {
