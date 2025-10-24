@@ -14,6 +14,24 @@ const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST
 const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
 const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
 
+const DEMO_KBV_ANSWERS = {
+  PIP: {
+    lastPaymentAmount: "210", 
+    accountNumber: "5336", 
+    paymentDay: "WEDNESDAY",
+    lastPaymentDate: "15-10-2025", 
+    sortCode: "123456", 
+    components: ["ENHANCED_MOBILITY", "STANDARD_DAILY_LIVING"] 
+  },
+  ESA: {
+    lastPaymentDate: "15-10-2025",
+    accountNumber: "5336", 
+    paymentDay: "WEDNESDAY",
+    lastPaymentAmount: "210", 
+    sortCode: "123456" 
+  }
+};
+
 // ------------------ AUTH CHECK ------------------
 const requireBearer = (req, res, next) => {
   const header = req.headers["authorization"] || "";
@@ -384,6 +402,272 @@ app.post("/validate-all", requireBearer, (req, res) => {
       matchedFields: [],
       failedFields: ["dob", "phone", "postcode", "nino"],
       match: false
+    });
+  }
+});
+
+// ------------------ PIP KBV ENDPOINTS ------------------
+
+// Validate PIP KBV answer
+app.post("/kbv/pip/validate", requireBearer, (req, res) => {
+  try {
+    const { questionId, answer } = req.body;
+    
+    if (!questionId || answer === undefined || answer === null) {
+      return res.status(400).json({
+        error: "Missing required fields: questionId and answer",
+        questionId,
+        answer: null,
+        pass: false,
+        errorStatus: 2
+      });
+    }
+
+    // Normalize answer based on question type
+    let normalizedAnswer = answer;
+    
+    if (questionId === "lastPaymentDate") {
+      // Normalize date format
+      const normalizeDob = (d) => {
+        if (!d) return d;
+        const str = String(d).trim();
+        if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+          return str;
+        }
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          const dateOnly = str.substring(0, 10);
+          const [year, month, day] = dateOnly.split('-');
+          return `${day}-${month}-${year}`;
+        }
+        return str;
+      };
+      normalizedAnswer = normalizeDob(answer);
+    } else if (questionId === "paymentDay") {
+      // Normalize day of week to uppercase
+      normalizedAnswer = String(answer).trim().toUpperCase();
+    } else if (questionId === "components") {
+      // Handle components - can be array or string
+      if (Array.isArray(answer)) {
+        normalizedAnswer = answer.map(c => String(c).trim().toUpperCase().replace(/\s+/g, '_'));
+      } else {
+        normalizedAnswer = [String(answer).trim().toUpperCase().replace(/\s+/g, '_')];
+      }
+    } else {
+      // For numeric fields, just trim
+      normalizedAnswer = String(answer).trim();
+    }
+
+    // Check against demo values
+    const expectedAnswer = DEMO_KBV_ANSWERS.PIP[questionId];
+    let pass = false;
+
+    if (questionId === "components") {
+      // For components, check if arrays match (order doesn't matter)
+      const expected = Array.isArray(expectedAnswer) ? expectedAnswer : [expectedAnswer];
+      const provided = Array.isArray(normalizedAnswer) ? normalizedAnswer : [normalizedAnswer];
+      pass = expected.length === provided.length && 
+             expected.every(e => provided.includes(e));
+    } else {
+      pass = normalizedAnswer === expectedAnswer;
+    }
+
+    const response = {
+      benefitType: "PIP",
+      questionId,
+      answer: normalizedAnswer,
+      pass,
+      errorStatus: pass ? 0 : 2,
+      message: pass ? "Answer validated successfully" : "Answer does not match records",
+      confidenceLevel: pass ? 3 : 0
+    };
+
+    return res.json(response);
+    
+  } catch (error) {
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+      pass: false,
+      errorStatus: 2
+    });
+  }
+});
+
+// ------------------ ESA KBV ENDPOINTS ------------------
+
+// Validate ESA KBV answer
+app.post("/kbv/esa/validate", requireBearer, (req, res) => {
+  try {
+    const { questionId, answer } = req.body;
+    
+    if (!questionId || answer === undefined || answer === null) {
+      return res.status(400).json({
+        error: "Missing required fields: questionId and answer",
+        questionId,
+        answer: null,
+        pass: false,
+        errorStatus: 2
+      });
+    }
+
+    // Normalize answer based on question type
+    let normalizedAnswer = answer;
+    
+    if (questionId === "lastPaymentDate") {
+      // Normalize date format
+      const normalizeDob = (d) => {
+        if (!d) return d;
+        const str = String(d).trim();
+        if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+          return str;
+        }
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          const dateOnly = str.substring(0, 10);
+          const [year, month, day] = dateOnly.split('-');
+          return `${day}-${month}-${year}`;
+        }
+        return str;
+      };
+      normalizedAnswer = normalizeDob(answer);
+    } else if (questionId === "paymentDay") {
+      // Normalize day of week to uppercase
+      normalizedAnswer = String(answer).trim().toUpperCase();
+    } else {
+      // For numeric fields, just trim
+      normalizedAnswer = String(answer).trim();
+    }
+
+    // Check against demo values
+    const expectedAnswer = DEMO_KBV_ANSWERS.ESA[questionId];
+    const pass = normalizedAnswer === expectedAnswer;
+
+    const response = {
+      benefitType: "ESA",
+      questionId,
+      answer: normalizedAnswer,
+      pass,
+      errorStatus: pass ? 0 : 2,
+      message: pass ? "Answer validated successfully" : "Answer does not match records",
+      confidenceLevel: pass ? 3 : 0
+    };
+
+    return res.json(response);
+    
+  } catch (error) {
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+      pass: false,
+      errorStatus: 2
+    });
+  }
+});
+
+// ------------------ COMBINED KBV VALIDATION ENDPOINT ------------------
+// Validates multiple KBV answers at once
+app.post("/kbv/validate-batch", requireBearer, (req, res) => {
+  try {
+    const { benefitType, answers } = req.body;
+    
+    if (!benefitType || !answers || !Array.isArray(answers)) {
+      return res.status(400).json({
+        error: "Missing required fields: benefitType and answers array",
+        benefitType,
+        answers: null,
+        results: []
+      });
+    }
+
+    const results = [];
+    let passCount = 0;
+    let totalCount = answers.length;
+
+    const demoAnswers = DEMO_KBV_ANSWERS[benefitType.toUpperCase()];
+    
+    if (!demoAnswers) {
+      return res.status(400).json({
+        error: `Invalid benefit type: ${benefitType}`,
+        validTypes: ["PIP", "ESA"]
+      });
+    }
+
+    for (const item of answers) {
+      const { questionId, answer } = item;
+      
+      // Normalize answer
+      let normalizedAnswer = answer;
+      
+      if (questionId === "lastPaymentDate") {
+        const normalizeDob = (d) => {
+          if (!d) return d;
+          const str = String(d).trim();
+          if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+            return str;
+          }
+          if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+            const dateOnly = str.substring(0, 10);
+            const [year, month, day] = dateOnly.split('-');
+            return `${day}-${month}-${year}`;
+          }
+          return str;
+        };
+        normalizedAnswer = normalizeDob(answer);
+      } else if (questionId === "paymentDay") {
+        normalizedAnswer = String(answer).trim().toUpperCase();
+      } else if (questionId === "components" && benefitType.toUpperCase() === "PIP") {
+        if (Array.isArray(answer)) {
+          normalizedAnswer = answer.map(c => String(c).trim().toUpperCase().replace(/\s+/g, '_'));
+        } else {
+          normalizedAnswer = [String(answer).trim().toUpperCase().replace(/\s+/g, '_')];
+        }
+      } else {
+        normalizedAnswer = String(answer).trim();
+      }
+
+      const expectedAnswer = demoAnswers[questionId];
+      let pass = false;
+
+      if (questionId === "components" && benefitType.toUpperCase() === "PIP") {
+        const expected = Array.isArray(expectedAnswer) ? expectedAnswer : [expectedAnswer];
+        const provided = Array.isArray(normalizedAnswer) ? normalizedAnswer : [normalizedAnswer];
+        pass = expected.length === provided.length && 
+               expected.every(e => provided.includes(e));
+      } else {
+        pass = normalizedAnswer === expectedAnswer;
+      }
+
+      if (pass) passCount++;
+
+      results.push({
+        questionId,
+        answer: normalizedAnswer,
+        pass
+      });
+    }
+
+    const allPassed = passCount === totalCount;
+    const errorStatus = allPassed ? 0 : (passCount > 0 ? 1 : 2);
+
+    const response = {
+      benefitType,
+      totalQuestions: totalCount,
+      passedQuestions: passCount,
+      results,
+      allPassed,
+      errorStatus,
+      message: allPassed ? "All answers validated successfully" : 
+               passCount > 0 ? "Partial validation" : "All answers failed validation",
+      confidenceLevel: allPassed ? 3 : (passCount > 0 ? 2 : 0),
+      guid: allPassed ? "GUID_DEMO_001" : ""
+    };
+
+    return res.json(response);
+    
+  } catch (error) {
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+      results: []
     });
   }
 });
