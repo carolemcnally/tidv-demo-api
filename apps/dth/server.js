@@ -235,120 +235,201 @@ app.post("/validate-postcode-nino", requireBearer, (req, res) => {
   return res.type("application/json").status(200).json(response);
 });
 
-// ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
-app.post("/validate-all", requireBearer, (req, res) => {
-  console.log("Incoming headers:", req.headers);
-  const { dob, phone, postcode, nino } = req.body || {};
+Your JSON body configuration looks correct! However, based on the error logs, the issue is that when Omilia sends the request, the JSON might not be getting properly formatted. Let me add better error handling and logging to debug this:
+Add this enhanced error handling to your server:
+javascriptimport express from "express";
 
-  // Normalize DOB input
-  const normalizeDob = (d) => {
-    if (!d) return d;
-    const str = String(d).trim();
-    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
-      return str;
+const app = express();
+
+// Add raw body capture BEFORE json parser for debugging
+app.use(express.raw({ type: 'application/json', limit: '10mb' }));
+
+// Custom JSON parsing with better error handling
+app.use((req, res, next) => {
+  if (req.headers['content-type']?.includes('application/json') && req.body) {
+    try {
+      const rawBody = req.body.toString('utf8');
+      console.log('📦 Raw JSON body:', rawBody);
+      req.body = JSON.parse(rawBody);
+      console.log('✅ Parsed body:', req.body);
+    } catch (e) {
+      console.error('❌ JSON Parse Error:', e.message);
+      console.error('📦 Failed raw body:', req.body.toString('utf8'));
+      return res.status(400).json({
+        error: 'Invalid JSON',
+        details: e.message,
+        position: e.message.match(/position (\d+)/)?.[1],
+        receivedBody: req.body.toString('utf8').substring(0, 200)
+      });
     }
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-      const dateOnly = str.substring(0, 10);
-      const [year, month, day] = dateOnly.split('-');
-      return `${month}-${day}-${year}`;  // Swapped for Omilia format
-    }
-    return str;
-  };
-
-  // Normalize postcode (remove spaces, uppercase)
-  const normalizePostcode = (pc) => {
-    if (!pc) return pc;
-    return String(pc).replace(/\s+/g, '').toUpperCase();
-  };
-
-  // Normalize NINO (remove spaces, uppercase)
-  const normalizeNino = (n) => {
-    if (!n) return n;
-    return String(n).replace(/\s+/g, '').toUpperCase();
-  };
-
-  // Normalize phone (keep as-is for now)
-  const normalizePhone = (p) => {
-    if (!p) return p;
-    return String(p).trim();
-  };
-
-  const normalizedDob = normalizeDob(dob);
-  const normalizedPhone = normalizePhone(phone);
-  const normalizedPostcode = normalizePostcode(postcode);
-  const normalizedNino = normalizeNino(nino);
-
-  console.log("Raw inputs:", { dob, phone, postcode, nino });
-  console.log("Normalized:", { 
-    dob: normalizedDob, 
-    phone: normalizedPhone, 
-    postcode: normalizedPostcode, 
-    nino: normalizedNino 
-  });
-
-  // Demo values to match against
-  const demoValues = {
-    dob: "01-05-1975",
-    phone: "07983215336",
-    postcode: "N225QH",
-    nino: "JC735092A"
-  };
-
-  // Check each field
-  const dobMatches = normalizedDob === demoValues.dob;
-  const phoneMatches = normalizedPhone === demoValues.phone;
-  const postcodeMatches = normalizedPostcode === demoValues.postcode;
-  const ninoMatches = normalizedNino === demoValues.nino;
-
-  // Determine which fields matched
-  const matchedFields = [];
-  const failedFields = [];
-
-  if (dobMatches) matchedFields.push("dob");
-  else failedFields.push("dob");
-
-  if (phoneMatches) matchedFields.push("phone");
-  else failedFields.push("phone");
-
-  if (postcodeMatches) matchedFields.push("postcode");
-  else failedFields.push("postcode");
-
-  if (ninoMatches) matchedFields.push("nino");
-  else failedFields.push("nino");
-
-  const matchCount = matchedFields.length;
-  const totalFields = 4;
-
-  // Determine error status
-  let errorStatus;
-  if (matchCount === 4) {
-    errorStatus = 0;  // All matched
-  } else if (matchCount >= 2) {
-    errorStatus = 1;  // Partial match (at least half)
-  } else {
-    errorStatus = 2;  // Failed (less than half)
   }
+  next();
+});
 
-  const response = {
-    dob: normalizedDob,
-    phone: normalizedPhone,
-    postcode: normalizedPostcode,
-    nino: normalizedNino,
-    matchCount,
-    totalFields,
-    matchedFields,
-    failedFields,
-    errorStatus,
-    match: errorStatus === 0,
-    message: errorStatus === 0 ? "All fields validated successfully" : 
-             errorStatus === 1 ? "Partial validation" : "Validation failed",
-    confidenceLevel: errorStatus === 0 ? 3 : errorStatus === 1 ? 2 : 0,
-    guid: errorStatus === 0 ? "GUID_DEMO_001" : ""
-  };
+const PORT = process.env.PORT || 10000;
+const BASE_HOST = process.env.BASE_HOST || `localhost:${PORT}`;
+const SCHEME = process.env.BASE_SCHEME || "https";
+const BASE = `${SCHEME}://${BASE_HOST}`;
+const BENEFITS = process.env.BENEFITS_BASE || `${SCHEME}://${process.env.BENEFITS_HOST || BASE_HOST}`;
+const KONG = process.env.KONG_BASE || `${SCHEME}://${process.env.KONG_HOST || BASE_HOST}`;
+const ACCESS = process.env.ACCESS_BASE || `${SCHEME}://${process.env.ACCESS_HOST || BASE_HOST}`;
 
-  console.log(`✓ Matches: ${matchCount}/${totalFields} - ${matchedFields.join(', ')} → errorStatus=${errorStatus}`);
+const BEARER = process.env.DEMO_BEARER_TOKEN || process.env.TOKEN || "demo_token";
+const REDIRECT_MODE = String(process.env.REDIRECT_MODE || "true").toLowerCase() === "true";
 
-  return res.type("application/json").status(200).json(response);
+// ... rest of your code stays the same
+Or if that's too invasive, just update the /validate-all endpoint with try-catch:
+javascript// ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
+app.post("/validate-all", requireBearer, (req, res) => {
+  try {
+    console.log("Incoming headers:", req.headers);
+    console.log("Request body type:", typeof req.body);
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    
+    // Check if body exists
+    if (!req.body || typeof req.body !== 'object') {
+      console.error("❌ Invalid body type");
+      return res.status(400).json({
+        error: "Invalid request body",
+        errorStatus: 2,
+        matchCount: 0,
+        totalFields: 4,
+        matchedFields: [],
+        failedFields: ["dob", "phone", "postcode", "nino"],
+        match: false,
+        message: "Invalid or missing request body"
+      });
+    }
+
+    const { dob, phone, postcode, nino } = req.body;
+
+    // Log what we received
+    console.log("Extracted fields:", { dob, phone, postcode, nino });
+
+    // Normalize DOB input
+    const normalizeDob = (d) => {
+      if (!d) return d;
+      const str = String(d).trim();
+      if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+        return str;
+      }
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        const dateOnly = str.substring(0, 10);
+        const [year, month, day] = dateOnly.split('-');
+        return `${month}-${day}-${year}`;
+      }
+      return str;
+    };
+
+    // Normalize postcode (remove spaces, uppercase)
+    const normalizePostcode = (pc) => {
+      if (!pc) return pc;
+      return String(pc).replace(/\s+/g, '').toUpperCase();
+    };
+
+    // Normalize NINO (remove spaces, uppercase)
+    const normalizeNino = (n) => {
+      if (!n) return n;
+      return String(n).replace(/\s+/g, '').toUpperCase();
+    };
+
+    // Normalize phone (keep as-is for now)
+    const normalizePhone = (p) => {
+      if (!p) return p;
+      return String(p).trim();
+    };
+
+    const normalizedDob = normalizeDob(dob);
+    const normalizedPhone = normalizePhone(phone);
+    const normalizedPostcode = normalizePostcode(postcode);
+    const normalizedNino = normalizeNino(nino);
+
+    console.log("Raw inputs:", { dob, phone, postcode, nino });
+    console.log("Normalized:", { 
+      dob: normalizedDob, 
+      phone: normalizedPhone, 
+      postcode: normalizedPostcode, 
+      nino: normalizedNino 
+    });
+
+    // Demo values to match against
+    const demoValues = {
+      dob: "01-05-1975",
+      phone: "07983215336",
+      postcode: "N225QH",
+      nino: "JC735092A"
+    };
+
+    // Check each field
+    const dobMatches = normalizedDob === demoValues.dob;
+    const phoneMatches = normalizedPhone === demoValues.phone;
+    const postcodeMatches = normalizedPostcode === demoValues.postcode;
+    const ninoMatches = normalizedNino === demoValues.nino;
+
+    // Determine which fields matched
+    const matchedFields = [];
+    const failedFields = [];
+
+    if (dobMatches) matchedFields.push("dob");
+    else failedFields.push("dob");
+
+    if (phoneMatches) matchedFields.push("phone");
+    else failedFields.push("phone");
+
+    if (postcodeMatches) matchedFields.push("postcode");
+    else failedFields.push("postcode");
+
+    if (ninoMatches) matchedFields.push("nino");
+    else failedFields.push("nino");
+
+    const matchCount = matchedFields.length;
+    const totalFields = 4;
+
+    // Determine error status
+    let errorStatus;
+    if (matchCount === 4) {
+      errorStatus = 0;
+    } else if (matchCount >= 2) {
+      errorStatus = 1;
+    } else {
+      errorStatus = 2;
+    }
+
+    const response = {
+      dob: normalizedDob,
+      phone: normalizedPhone,
+      postcode: normalizedPostcode,
+      nino: normalizedNino,
+      matchCount,
+      totalFields,
+      matchedFields,
+      failedFields,
+      errorStatus,
+      match: errorStatus === 0,
+      message: errorStatus === 0 ? "All fields validated successfully" : 
+               errorStatus === 1 ? "Partial validation" : "Validation failed",
+      confidenceLevel: errorStatus === 0 ? 3 : errorStatus === 1 ? 2 : 0,
+      guid: errorStatus === 0 ? "GUID_DEMO_001" : ""
+    };
+
+    console.log(`✓ Matches: ${matchCount}/${totalFields} - ${matchedFields.join(', ')} → errorStatus=${errorStatus}`);
+
+    return res.type("application/json").status(200).json(response);
+    
+  } catch (error) {
+    console.error("❌ Error in /validate-all:", error);
+    console.error("Error stack:", error.stack);
+    return res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+      errorStatus: 2,
+      matchCount: 0,
+      totalFields: 4,
+      matchedFields: [],
+      failedFields: ["dob", "phone", "postcode", "nino"],
+      match: false
+    });
+  }
 });
 
 // ------------------ START SERVER ------------------
