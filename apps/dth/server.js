@@ -235,6 +235,121 @@ app.post("/validate-postcode-nino", requireBearer, (req, res) => {
   return res.type("application/json").status(200).json(response);
 });
 
+// ------------------ VALIDATE ALL FIELDS ENDPOINT ------------------
+app.post("/validate-all", requireBearer, (req, res) => {
+  console.log("Incoming headers:", req.headers);
+  const { dob, phone, postcode, nino } = req.body || {};
+
+  // Normalize DOB input
+  const normalizeDob = (d) => {
+    if (!d) return d;
+    const str = String(d).trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+      return str;
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const dateOnly = str.substring(0, 10);
+      const [year, month, day] = dateOnly.split('-');
+      return `${month}-${day}-${year}`;  // Swapped for Omilia format
+    }
+    return str;
+  };
+
+  // Normalize postcode (remove spaces, uppercase)
+  const normalizePostcode = (pc) => {
+    if (!pc) return pc;
+    return String(pc).replace(/\s+/g, '').toUpperCase();
+  };
+
+  // Normalize NINO (remove spaces, uppercase)
+  const normalizeNino = (n) => {
+    if (!n) return n;
+    return String(n).replace(/\s+/g, '').toUpperCase();
+  };
+
+  // Normalize phone (keep as-is for now)
+  const normalizePhone = (p) => {
+    if (!p) return p;
+    return String(p).trim();
+  };
+
+  const normalizedDob = normalizeDob(dob);
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedPostcode = normalizePostcode(postcode);
+  const normalizedNino = normalizeNino(nino);
+
+  console.log("Raw inputs:", { dob, phone, postcode, nino });
+  console.log("Normalized:", { 
+    dob: normalizedDob, 
+    phone: normalizedPhone, 
+    postcode: normalizedPostcode, 
+    nino: normalizedNino 
+  });
+
+  // Demo values to match against
+  const demoValues = {
+    dob: "01-05-1975",
+    phone: "07983215336",
+    postcode: "N225QH",
+    nino: "JC735092A"
+  };
+
+  // Check each field
+  const dobMatches = normalizedDob === demoValues.dob;
+  const phoneMatches = normalizedPhone === demoValues.phone;
+  const postcodeMatches = normalizedPostcode === demoValues.postcode;
+  const ninoMatches = normalizedNino === demoValues.nino;
+
+  // Determine which fields matched
+  const matchedFields = [];
+  const failedFields = [];
+
+  if (dobMatches) matchedFields.push("dob");
+  else failedFields.push("dob");
+
+  if (phoneMatches) matchedFields.push("phone");
+  else failedFields.push("phone");
+
+  if (postcodeMatches) matchedFields.push("postcode");
+  else failedFields.push("postcode");
+
+  if (ninoMatches) matchedFields.push("nino");
+  else failedFields.push("nino");
+
+  const matchCount = matchedFields.length;
+  const totalFields = 4;
+
+  // Determine error status
+  let errorStatus;
+  if (matchCount === 4) {
+    errorStatus = 0;  // All matched
+  } else if (matchCount >= 2) {
+    errorStatus = 1;  // Partial match (at least half)
+  } else {
+    errorStatus = 2;  // Failed (less than half)
+  }
+
+  const response = {
+    dob: normalizedDob,
+    phone: normalizedPhone,
+    postcode: normalizedPostcode,
+    nino: normalizedNino,
+    matchCount,
+    totalFields,
+    matchedFields,
+    failedFields,
+    errorStatus,
+    match: errorStatus === 0,
+    message: errorStatus === 0 ? "All fields validated successfully" : 
+             errorStatus === 1 ? "Partial validation" : "Validation failed",
+    confidenceLevel: errorStatus === 0 ? 3 : errorStatus === 1 ? 2 : 0,
+    guid: errorStatus === 0 ? "GUID_DEMO_001" : ""
+  };
+
+  console.log(`✓ Matches: ${matchCount}/${totalFields} - ${matchedFields.join(', ')} → errorStatus=${errorStatus}`);
+
+  return res.type("application/json").status(200).json(response);
+});
 
 // ------------------ START SERVER ------------------
 app.listen(PORT, () => console.log(`🚀 DTH listening on port ${PORT}`));
